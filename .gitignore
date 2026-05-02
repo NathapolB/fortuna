@@ -1,0 +1,51 @@
+# Project Fortuna — .gitignore
+
+# Virtual environment
+.venv/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyo
+
+# Environment secrets
+.env
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Data — raw HTML cache (large, regenerable from sources)
+data/raw/cache/
+
+# SQLite DB (working store — regenerable from draws.jsonl)
+data/lab.db
+data/lab.db-shm
+data/lab.db-wal
+
+# Model artifacts (large binary files)
+data/models/*.pkl
+models/artifacts/
+
+# iCloud sentinel — don't track the sentinel file itself (it's created at init)
+data/.nosync
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# pytest cache
+.pytest_cache/
+**/.pytest_cache/
+
+# ruff cache
+.ruff_cache/
+
+# Logs (generated at runtime)
+logs/
+
+# Note: data/raw/draws.jsonl IS tracked in git (ground truth, small)
+# Note: data/raw/draws_corrections.jsonl IS tracked in git
+# Note: data/exports/ IS tracked in git (frozen pre-draw prediction snapshots)
