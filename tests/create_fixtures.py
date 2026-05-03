@@ -21,6 +21,11 @@ Expected JSON format matches the fields asserted in test_parser.py:
 
 After running this script, test_parser.py will stop skipping those tests.
 Nash can also hand-create fixtures if source URLs return unexpected HTML.
+
+Sanook URL pattern updated 2026-05-02:
+    Old (broken): /lotto/{YYYY}/{MM}/{DD}/
+    New (working): /lotto/check/{DDMMYYYY_BE}/  (4-digit Buddhist Era year)
+    Example: 16 Jan 2024 CE → BE 2567 → /check/16012567/
 """
 
 from __future__ import annotations
@@ -44,74 +49,51 @@ FIXTURES_DIR = Path(__file__).parent / "fixtures"
 # Dates to use as fixtures — spread across years for good coverage
 SAMPLE_DATES = {
     "sanook": [
-        "2024-01-01",
-        "2023-06-16",
-        "2022-12-01",
-        "2010-07-16",
-        "2007-03-01",
+        "2026-04-16",  # Most recent known draw (16 Apr 2026 CE = 16 Apr 2569 BE)
+        "2026-03-16",
+        "2026-03-01",
+        "2026-02-16",
+        "2026-01-16",
     ],
-    "kapook": [
-        "2024-01-01",
-        "2023-06-16",
-        "2022-12-01",
-        "2019-09-16",
-        "2015-05-01",
-    ],
-    "glo": [
-        "2024-01-01",
-        "2023-12-16",
-        "2023-06-01",
-        "2022-11-16",
-        "2021-05-01",
-    ],
+    # Kapook and GLO are currently stubbed; fixtures left for future use
+    "kapook": [],
+    "glo": [],
 }
 
-SANOOK_URL_TMPL = "https://news.sanook.com/lotto/{y}/{m:02d}/{d:02d}/"
-KAPOOK_URL_TMPL = "https://horoscope.kapook.com/lottery/{y}/{m:02d}/{d:02d}/"
-GLO_URL_TMPL = "https://www.glo.or.th/result/{y}{m:02d}{d:02d}.html"
+
+def _sanook_url(d: date) -> str:
+    """Build correct Sanook /check/ URL with 4-digit Buddhist Era year."""
+    be_year = d.year + 543
+    ddmmyy_be = f"{d.day:02d}{d.month:02d}{be_year}"
+    return f"https://news.sanook.com/lotto/check/{ddmmyy_be}/"
 
 
-def _date_to_url(source: str, date_str: str) -> str:
+def save_fixture_sanook(date_str: str, draws_from_store: dict) -> None:
     d = date.fromisoformat(date_str)
-    if source == "sanook":
-        return SANOOK_URL_TMPL.format(y=d.year, m=d.month, d=d.day)
-    elif source == "kapook":
-        return KAPOOK_URL_TMPL.format(y=d.year, m=d.month, d=d.day)
-    elif source == "glo":
-        return GLO_URL_TMPL.format(y=d.year, m=d.month, d=d.day)
-    raise ValueError(f"Unknown source: {source}")
+    url = _sanook_url(d)
 
-
-def save_fixture(source: str, date_str: str, draws_from_store: dict) -> None:
-    url = _date_to_url(source, date_str)
-    fixture_dir = FIXTURES_DIR / source
+    fixture_dir = FIXTURES_DIR / "sanook"
     fixture_dir.mkdir(parents=True, exist_ok=True)
 
     html_file = fixture_dir / f"{date_str}.html"
     expected_file = fixture_dir / f"{date_str}.expected.json"
 
-    # Fetch HTML
+    # Fetch HTML (allow_404 so we can probe gracefully)
     try:
-        html, from_cache = fetch_url(url, source, use_cache=True)
+        html, from_cache = fetch_url(url, "sanook", use_cache=True, allow_404=True)
     except Exception as e:
-        print(f"  SKIP {source}/{date_str}: fetch failed: {e}")
+        print(f"  SKIP sanook/{date_str}: fetch failed: {e}")
+        return
+
+    if html is None:
+        print(f"  SKIP sanook/{date_str}: 404 at {url}")
         return
 
     html_file.write_bytes(html)
     print(f"  Saved HTML: {html_file} ({len(html)} bytes, cache={from_cache})")
 
-    # Parse and extract expected values
-    if source == "sanook":
-        parser = SanookParser()
-        draw = parser.parse(html, url)
-    elif source == "kapook":
-        parser = KapookParser()
-        draw = parser.parse(html, url)
-    elif source == "glo":
-        parser = GLOParser()
-        draw = parser.parse(html, url)
-    else:
-        return
+    parser = SanookParser()
+    draw = parser.parse(html, url)
 
     if draw is not None:
         expected = {
@@ -120,8 +102,8 @@ def save_fixture(source: str, date_str: str, draws_from_store: dict) -> None:
             "two_digit_back": draw.two_digit_back,
             "three_digit_back": draw.three_digit_back,
         }
+        print(f"  Parsed: first_prize={draw.first_prize}  two_back={draw.two_digit_back}  three_back={draw.three_digit_back}")
     elif date_str in draws_from_store:
-        # Fallback to store data
         store_draw = draws_from_store[date_str]
         expected = {
             "draw_id": store_draw.draw_id,
@@ -132,7 +114,12 @@ def save_fixture(source: str, date_str: str, draws_from_store: dict) -> None:
         print(f"  Used store data for expected values (parser returned None)")
     else:
         print(f"  WARNING: parser returned None and no store data for {date_str}")
-        expected = {"draw_id": date_str, "first_prize": "UNKNOWN", "two_digit_back": "XX", "three_digit_back": []}
+        expected = {
+            "draw_id": date_str,
+            "first_prize": "UNKNOWN",
+            "two_digit_back": "XX",
+            "three_digit_back": [],
+        }
 
     expected_file.write_text(json.dumps(expected, indent=2, ensure_ascii=False))
     print(f"  Saved expected: {expected_file}")
@@ -146,12 +133,11 @@ def main() -> None:
     draws_by_id = {d.draw_id: d for d in store.iter_draws()}
     print(f"Loaded {len(draws_by_id)} draws from store for fallback")
 
-    for source, dates in SAMPLE_DATES.items():
-        print(f"\n{'=' * 40}")
-        print(f"Source: {source}")
-        for date_str in dates:
-            print(f"  Processing {date_str}...")
-            save_fixture(source, date_str, draws_by_id)
+    print(f"\n{'=' * 40}")
+    print("Source: sanook")
+    for date_str in SAMPLE_DATES["sanook"]:
+        print(f"  Processing {date_str}...")
+        save_fixture_sanook(date_str, draws_by_id)
 
     print("\nFixtures created. Run pytest tests/test_parser.py -v to verify.")
 

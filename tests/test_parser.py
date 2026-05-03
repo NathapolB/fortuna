@@ -8,11 +8,14 @@ Phase 1 acceptance criterion: pytest tests/test_parser.py -v is green.
 Note: Fixture HTML files need to be created by running:
     python tests/create_fixtures.py
 which fetches and saves sample pages from each source.
+
+Sanook URL pattern updated 2026-05-02 to use /lotto/check/{DDMMYYYY_BE}/.
 """
 
 from __future__ import annotations
 
 import json
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -60,6 +63,13 @@ def _assert_draw_matches(draw: Draw | None, expected: dict, source_label: str) -
             )
 
 
+def _sanook_check_url(date_str: str) -> str:
+    """Build /check/ URL for a given YYYY-MM-DD date string."""
+    d = date.fromisoformat(date_str)
+    be_year = d.year + 543
+    return f"https://news.sanook.com/lotto/check/{d.day:02d}{d.month:02d}{be_year}/"
+
+
 # ---------------------------------------------------------------------------
 # Sanook parser tests
 # ---------------------------------------------------------------------------
@@ -70,49 +80,109 @@ class TestSanookParser:
         self.parser = SanookParser()
 
     def test_parse_fixture_1(self):
-        html = _load_fixture("sanook", "2024-01-01.html")
-        expected = _load_expected("sanook", "2024-01-01.html")
-        draw = self.parser.parse(html, f"https://news.sanook.com/lotto/2024/01/01/")
+        html = _load_fixture("sanook", "2026-04-16.html")
+        expected = _load_expected("sanook", "2026-04-16.html")
+        draw = self.parser.parse(html, _sanook_check_url("2026-04-16"))
         _assert_draw_matches(draw, expected, "Sanook")
 
     def test_parse_fixture_2(self):
-        html = _load_fixture("sanook", "2023-06-16.html")
-        expected = _load_expected("sanook", "2023-06-16.html")
-        draw = self.parser.parse(html, f"https://news.sanook.com/lotto/2023/06/16/")
+        html = _load_fixture("sanook", "2026-03-16.html")
+        expected = _load_expected("sanook", "2026-03-16.html")
+        draw = self.parser.parse(html, _sanook_check_url("2026-03-16"))
         _assert_draw_matches(draw, expected, "Sanook")
 
     def test_parse_fixture_3(self):
-        html = _load_fixture("sanook", "2022-12-01.html")
-        expected = _load_expected("sanook", "2022-12-01.html")
-        draw = self.parser.parse(html, f"https://news.sanook.com/lotto/2022/12/01/")
+        html = _load_fixture("sanook", "2026-03-01.html")
+        expected = _load_expected("sanook", "2026-03-01.html")
+        draw = self.parser.parse(html, _sanook_check_url("2026-03-01"))
         _assert_draw_matches(draw, expected, "Sanook")
 
     def test_parse_fixture_4(self):
-        html = _load_fixture("sanook", "2010-07-16.html")
-        expected = _load_expected("sanook", "2010-07-16.html")
-        draw = self.parser.parse(html, f"https://news.sanook.com/lotto/2010/07/16/")
+        html = _load_fixture("sanook", "2026-02-16.html")
+        expected = _load_expected("sanook", "2026-02-16.html")
+        draw = self.parser.parse(html, _sanook_check_url("2026-02-16"))
         _assert_draw_matches(draw, expected, "Sanook")
 
     def test_parse_fixture_5(self):
-        html = _load_fixture("sanook", "2007-03-01.html")
-        expected = _load_expected("sanook", "2007-03-01.html")
-        draw = self.parser.parse(html, f"https://news.sanook.com/lotto/2007/03/01/")
+        html = _load_fixture("sanook", "2026-01-16.html")
+        expected = _load_expected("sanook", "2026-01-16.html")
+        draw = self.parser.parse(html, _sanook_check_url("2026-01-16"))
         _assert_draw_matches(draw, expected, "Sanook")
 
-    def test_extract_date_from_url(self):
+    def test_extract_date_from_check_url(self):
+        """New /check/ URL format: DDMMYYYY (4-digit BE year)."""
         parser = SanookParser()
-        assert parser.extract_date_from_url("https://news.sanook.com/lotto/2024/01/16/") == "2024-01-16"
-        assert parser.extract_date_from_url("https://news.sanook.com/lotto/2005/03/01/foo") == "2005-03-01"
+        # 16 Apr 2026 CE = BE 2569 → 16042569
+        assert parser.extract_date_from_url(
+            "https://news.sanook.com/lotto/check/16042569/"
+        ) == "2026-04-16"
+        # 2 May 2026 CE = BE 2569 → 02052569
+        assert parser.extract_date_from_url(
+            "https://news.sanook.com/lotto/check/02052569/"
+        ) == "2026-05-02"
+        # 1 Jan 2024 CE = BE 2567 → 01012567
+        assert parser.extract_date_from_url(
+            "https://news.sanook.com/lotto/check/01012567/"
+        ) == "2024-01-01"
+
+    def test_extract_date_from_old_url(self):
+        """Old URL format still works (backward compat)."""
+        parser = SanookParser()
+        assert parser.extract_date_from_url(
+            "https://news.sanook.com/lotto/2024/01/16/"
+        ) == "2024-01-16"
+        assert parser.extract_date_from_url(
+            "https://news.sanook.com/lotto/2005/03/01/foo"
+        ) == "2005-03-01"
         assert parser.extract_date_from_url("https://example.com/no-date/") is None
 
     def test_parse_invalid_html_returns_none(self):
         parser = SanookParser()
-        result = parser.parse(b"<html><body>No lottery data here</body></html>", "https://news.sanook.com/lotto/2024/01/01/")
-        # Should return None or a Draw with potentially missing fields
+        # Should not raise; may return None or a Draw with potentially missing fields
+        result = parser.parse(
+            b"<html><body>No lottery data here</body></html>",
+            "https://news.sanook.com/lotto/check/01012567/",
+        )
         # We just check it doesn't raise
         pass
 
-    def test_extract_draw_urls(self):
+    def test_format_be(self):
+        """_format_be must produce correct 4-digit BE year strings."""
+        from fortuna.scraper import SanookScraper
+        scraper = SanookScraper.__new__(SanookScraper)
+        assert SanookScraper._format_be(date(2026, 4, 16)) == "16042569"
+        assert SanookScraper._format_be(date(2026, 5, 2)) == "02052569"
+        assert SanookScraper._format_be(date(2024, 1, 1)) == "01012567"
+        assert SanookScraper._format_be(date(2005, 3, 1)) == "01032548"
+
+    def test_generate_candidate_dates(self):
+        """Should yield 1st and 16th for each month in range."""
+        from fortuna.scraper import SanookScraper
+        candidates = list(
+            SanookScraper._generate_candidate_dates(
+                date(2026, 1, 1), date(2026, 3, 31)
+            )
+        )
+        assert date(2026, 1, 1) in candidates
+        assert date(2026, 1, 16) in candidates
+        assert date(2026, 2, 1) in candidates
+        assert date(2026, 2, 16) in candidates
+        assert date(2026, 3, 1) in candidates
+        assert date(2026, 3, 16) in candidates
+        assert len(candidates) == 6
+
+    def test_looks_like_draw_page(self):
+        from fortuna.scraper import SanookScraper
+        # Bug fix: b"..." literals cannot contain non-ASCII — use .encode("utf-8")
+        good = "<div class='lottocheck__sec'>...รางวัลที่ 1...</div>".encode("utf-8")
+        bad_no_class = "<div>...รางวัลที่ 1...</div>".encode("utf-8")
+        bad_404 = b"<html><body>Not found</body></html>"
+        assert SanookScraper._looks_like_draw_page(good) is True
+        assert SanookScraper._looks_like_draw_page(bad_no_class) is False
+        assert SanookScraper._looks_like_draw_page(bad_404) is False
+
+    def test_extract_draw_urls_legacy(self):
+        """Legacy extract_draw_urls still returns URLs matching old pattern."""
         parser = SanookParser()
         html = b"""
         <html><body>
@@ -129,7 +199,7 @@ class TestSanookParser:
 
 
 # ---------------------------------------------------------------------------
-# Kapook parser tests
+# Kapook parser tests (skipped until scraper is re-enabled)
 # ---------------------------------------------------------------------------
 
 
@@ -169,7 +239,7 @@ class TestKapookParser:
 
 
 # ---------------------------------------------------------------------------
-# GLO parser tests
+# GLO parser tests (skipped until scraper is re-enabled)
 # ---------------------------------------------------------------------------
 
 

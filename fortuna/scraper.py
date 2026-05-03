@@ -3,12 +3,22 @@
 SPEC §3.1, §3.2, §3.4.
 
 Sources:
-    1. news.sanook.com  — primary backfill (20+ years, stable paginated archive)
-    2. kapook.com       — cross-check secondary
-    3. glo.or.th        — primary for current/live draws
+    1. news.sanook.com  — primary backfill (20+ years, date-based /check/ URL)
+    2. kapook.com       — cross-check secondary (stubbed — URL pattern unverified)
+    3. glo.or.th        — primary for current/live draws (stubbed — JS-heavy page)
 
 Politeness: 1 req / 3 sec, random UA, exponential backoff on 429/5xx, max 3 retries.
-Cache: raw HTML gzipped to data/raw/cache/{source}/{date}.html.gz keyed by URL hash + date.
+Cache: raw HTML gzipped to data/raw/cache/{source}/{url_hash}.html.gz.
+
+Sanook URL fix (2026-05-02):
+    Old (broken): /lotto/archive/{year}/  +  /lotto/{YYYY}/{MM}/{DD}/
+    New (working): /lotto/check/{DDMMYY_BE}/
+    where DDMMYY_BE = day-month-(BE year % 100), zero-padded.
+    Example: 16 Apr 2026 CE = 16 Apr 2569 BE → /check/16042569/
+
+    There is no archive index — candidate dates are generated from the Thai
+    government lottery schedule (1st and 16th of every month) with ±2 day
+    holiday-shift probing.
 """
 
 from __future__ import annotations
@@ -22,7 +32,6 @@ import time
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Iterator
-from urllib.parse import quote, urljoin, urlparse
 
 import requests
 from requests.exceptions import ConnectionError, RequestException, Timeout
@@ -89,10 +98,12 @@ def fetch_url(
     *,
     use_cache: bool = True,
     session: requests.Session | None = None,
-) -> tuple[bytes, bool]:
+    allow_404: bool = False,
+) -> tuple[bytes | None, bool]:
     """Fetch URL with caching and politeness. Returns (html_bytes, from_cache).
 
-    Raises RequestException on permanent failure after retries.
+    If allow_404=True, a 404 response returns (None, False) instead of raising.
+    Raises RequestException on permanent non-404 failure after retries.
     """
     cache_file = _cache_path(source_label, url)
 
@@ -133,12 +144,16 @@ def fetch_url(
             _save_cache(cache_file, content)
             return content, False
 
+        if resp.status_code == 404 and allow_404:
+            logger.debug("HTTP 404 (allowed) for %s", url)
+            return None, False
+
         if resp.status_code in (429, 500, 502, 503, 504):
             logger.warning("HTTP %d on attempt %d for %s", resp.status_code, attempt + 1, url)
             last_exc = RequestException(f"HTTP {resp.status_code}")
             continue
 
-        # Non-retryable (404, etc.)
+        # Non-retryable (404 not allowed, etc.)
         raise RequestException(f"HTTP {resp.status_code} for {url} (not retryable)")
 
     raise RequestException(
@@ -151,140 +166,209 @@ def fetch_url(
 # ---------------------------------------------------------------------------
 
 SANOOK_BASE = "https://news.sanook.com/lotto"
-# Sanook archive URL pattern: /lotto/{YYYY}/{MM}/{DD}/
-# The index pages are paginated by year/month.
 
 
 class SanookScraper:
-    """Scrape news.sanook.com lottery archive. SPEC §3.1."""
+    """Scrape news.sanook.com lottery results by date. SPEC §3.1.
 
-    ARCHIVE_URL_TEMPLATE = "https://news.sanook.com/lotto/archive/{year}/"
+    URL pattern: https://news.sanook.com/lotto/check/{DDMMYY_BE}/
+    where DDMMYY_BE = zero-padded day + month + (BE year, 4-digit).
+    Example: 16 April 2026 CE → BE 2569 → /check/16042569/
+
+    No archive index exists — candidate draw dates are generated from the Thai
+    government schedule (1st and 16th monthly) with ±2-day holiday-shift probing.
+    """
+
+    DRAW_URL_TEMPLATE = "https://news.sanook.com/lotto/check/{ddmmyy_be}/"
+
+    # Holiday-shift probe order: try standard date first, then common offsets
+    PROBE_OFFSETS = [0, 1, -1, 2, -2]
 
     def __init__(self, session: requests.Session | None = None) -> None:
         self._session = session or requests.Session()
         self._parser = SanookParser()
 
+    # ------------------------------------------------------------------
+    # Public API (keeps backfill.py interface intact)
+    # ------------------------------------------------------------------
+
     def backfill_archive(
         self, since: date, until: date | None = None
     ) -> Iterator[Draw]:
-        """Yield Draw objects from the Sanook archive.
+        """Yield Draw objects for all draws between since and until (inclusive).
 
-        Iterates year-by-year from `since` to `until` (default: today).
-        Each draw page is fetched, parsed, and yielded.
+        Generates candidate dates (1st + 16th of every month), probes each with
+        ±2 day offsets to handle Thai public holiday shifts.
         """
         if until is None:
             until = date.today()
 
-        current_year = since.year
-        end_year = until.year
+        logger.info(
+            "SanookScraper.backfill_archive: scanning %s → %s",
+            since.isoformat(),
+            until.isoformat(),
+        )
 
-        while current_year <= end_year:
-            archive_url = self.ARCHIVE_URL_TEMPLATE.format(year=current_year)
-            logger.info("Fetching Sanook archive index for year %d: %s", current_year, archive_url)
-
-            try:
-                html, from_cache = fetch_url(archive_url, "sanook", session=self._session)
-            except RequestException as e:
-                logger.error("Failed to fetch Sanook archive for %d: %s", current_year, e)
-                current_year += 1
+        for candidate in self._generate_candidate_dates(since, until):
+            actual_date, html = self._probe_draw(candidate)
+            if html is None:
+                logger.debug(
+                    "No draw found near candidate %s (±2 days) — skipping",
+                    candidate.isoformat(),
+                )
                 continue
 
-            draw_urls = self._parser.extract_draw_urls(html, archive_url)
-            logger.info("Found %d draw links for year %d", len(draw_urls), current_year)
-
-            for draw_url in draw_urls:
-                # Filter by date range
-                draw_date_str = self._parser.extract_date_from_url(draw_url)
-                if draw_date_str is None:
-                    continue
-                try:
-                    draw_date = date.fromisoformat(draw_date_str)
-                except ValueError:
-                    continue
-                if draw_date < since or draw_date > until:
-                    continue
-
-                try:
-                    draw_html, _ = fetch_url(draw_url, "sanook", session=self._session)
-                except RequestException as e:
-                    logger.warning("Failed to fetch Sanook draw %s: %s", draw_url, e)
-                    continue
-
-                draw = self._parser.parse(draw_html, draw_url)
-                if draw is not None:
-                    yield draw
-
-            current_year += 1
+            url = self.DRAW_URL_TEMPLATE.format(
+                ddmmyy_be=self._format_be(actual_date)
+            )
+            draw = self._parser.parse(html, url)
+            if draw is not None:
+                yield draw
+            else:
+                logger.warning(
+                    "SanookParser returned None for draw near %s (actual %s)",
+                    candidate.isoformat(),
+                    actual_date.isoformat(),
+                )
 
     def fetch_by_date(self, d: date) -> Draw | None:
-        """Fetch a specific draw date from Sanook."""
-        # Try common URL format: /YYYY/MM/DD/
-        url = f"{SANOOK_BASE}/{d.year}/{d.month:02d}/{d.day:02d}/"
-        try:
-            html, _ = fetch_url(url, "sanook", session=self._session)
-            return self._parser.parse(html, url)
-        except RequestException as e:
-            logger.warning("Sanook fetch_by_date failed for %s: %s", d, e)
+        """Fetch a specific draw date from Sanook (probes ±2 days for holiday shifts)."""
+        actual_date, html = self._probe_draw(d)
+        if html is None:
+            logger.warning("Sanook fetch_by_date: no draw found near %s", d.isoformat())
             return None
+        url = self.DRAW_URL_TEMPLATE.format(ddmmyy_be=self._format_be(actual_date))
+        return self._parser.parse(html, url)
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _probe_draw(self, candidate: date) -> tuple[date, bytes] | tuple[None, None]:
+        """Try candidate date and offsets. Return (actual_date, html) or (None, None)."""
+        for offset in self.PROBE_OFFSETS:
+            try_date = candidate + timedelta(days=offset)
+            ddmmyy_be = self._format_be(try_date)
+            url = self.DRAW_URL_TEMPLATE.format(ddmmyy_be=ddmmyy_be)
+            logger.debug("Probing Sanook URL: %s", url)
+
+            try:
+                html, from_cache = fetch_url(
+                    url, "sanook", session=self._session, allow_404=True
+                )
+            except RequestException as e:
+                logger.warning("Sanook fetch error for %s: %s", url, e)
+                continue
+
+            if html is not None and self._looks_like_draw_page(html):
+                logger.info(
+                    "Found draw at %s (offset %+d from candidate %s, cache=%s)",
+                    try_date.isoformat(),
+                    offset,
+                    candidate.isoformat(),
+                    from_cache,
+                )
+                return try_date, html
+
+        return None, None
+
+    @staticmethod
+    def _generate_candidate_dates(start: date, end: date) -> Iterator[date]:
+        """Yield 1st and 16th of each month between start and end inclusive."""
+        # Align to the first day of start's month
+        d = date(start.year, start.month, 1)
+        while d <= end:
+            for day in (1, 16):
+                candidate = date(d.year, d.month, day)
+                if start <= candidate <= end:
+                    yield candidate
+            # Advance to next month
+            if d.month == 12:
+                d = date(d.year + 1, 1, 1)
+            else:
+                d = date(d.year, d.month + 1, 1)
+
+    @staticmethod
+    def _format_be(d: date) -> str:
+        """Format date as DDMMYYYY in Buddhist Era (4-digit BE year).
+
+        Example: 16 April 2026 CE → BE 2569 → '16042569'
+        Example: 2 May 2026 CE → BE 2569 → '02052569'
+        """
+        be_year = d.year + 543
+        return f"{d.day:02d}{d.month:02d}{be_year}"
+
+    @staticmethod
+    def _looks_like_draw_page(html: bytes) -> bool:
+        """Quick heuristic: page must contain lottocheck CSS classes and Thai prize label."""
+        try:
+            text = html.decode("utf-8", errors="ignore")
+        except Exception:
+            return False
+        return "lottocheck__" in text and "รางวัลที่ 1" in text
 
 
 # ---------------------------------------------------------------------------
-# Kapook scraper — cross-check
+# Kapook scraper — cross-check (STUBBED — URL pattern unverified)
 # ---------------------------------------------------------------------------
+
+# TODO: Kapook URL pattern has not been verified against live site.
+# The original pattern /lottery/{YYYY}/{MM}/{DD}/ may return 404 or redirect.
+# Stub returns None for all fetches until the correct URL is confirmed.
+# Once verified, replace this stub with a proper date-based implementation
+# similar to SanookScraper. (SPEC §3.1 fallback: Sanook-only is acceptable Phase 1)
 
 KAPOOK_BASE = "https://horoscope.kapook.com/lottery"
 
 
 class KapookScraper:
-    """Scrape kapook.com lottery archive for cross-checking. SPEC §3.1."""
+    """Scrape kapook.com lottery archive for cross-checking. SPEC §3.1.
+
+    STUBBED: URL pattern unverified. Returns None for all requests.
+    """
 
     def __init__(self, session: requests.Session | None = None) -> None:
         self._session = session or requests.Session()
         self._parser = KapookParser()
 
     def fetch_by_date(self, d: date) -> Draw | None:
-        """Fetch a specific draw date from Kapook."""
-        # Kapook URL pattern: /lottery/{YYYY}/{MM}/{DD}/
-        url = f"{KAPOOK_BASE}/{d.year}/{d.month:02d}/{d.day:02d}/"
-        try:
-            html, _ = fetch_url(url, "kapook", session=self._session)
-            return self._parser.parse(html, url)
-        except RequestException as e:
-            logger.warning("Kapook fetch_by_date failed for %s: %s", d, e)
-            return None
+        """STUBBED — always returns None until Kapook URL pattern is confirmed."""
+        logger.debug(
+            "KapookScraper.fetch_by_date: stubbed, skipping %s", d.isoformat()
+        )
+        return None
 
 
 # ---------------------------------------------------------------------------
-# GLO official scraper — current/live draws
+# GLO official scraper — current/live draws (STUBBED — JS-heavy page)
 # ---------------------------------------------------------------------------
+
+# TODO: glo.or.th result pages are JavaScript-rendered (React/Angular SPA).
+# A plain requests.get() returns the shell HTML without lottery data.
+# Needs Selenium or Playwright with a headless browser for Phase 2.
+# Stub returns None to avoid silent empty-parse errors. (SPEC §3.1 fallback)
 
 GLO_BASE = "https://www.glo.or.th"
 
 
 class GLOScraper:
-    """Scrape glo.or.th for current draws. SPEC §3.1."""
+    """Scrape glo.or.th for current draws. SPEC §3.1.
+
+    STUBBED: glo.or.th is a JS-heavy SPA — needs Selenium/Playwright (Phase 2).
+    """
 
     def __init__(self, session: requests.Session | None = None) -> None:
         self._session = session or requests.Session()
         self._parser = GLOParser()
 
     def fetch_latest(self) -> Draw | None:
-        """Fetch the most recent draw result from glo.or.th."""
-        url = f"{GLO_BASE}/result/reward-header.html"
-        try:
-            html, _ = fetch_url(url, "glo", use_cache=False, session=self._session)
-            return self._parser.parse(html, url)
-        except RequestException as e:
-            logger.warning("GLO fetch_latest failed: %s", e)
-            return None
+        """STUBBED — returns None until Selenium integration is added."""
+        logger.debug("GLOScraper.fetch_latest: stubbed (JS-heavy page)")
+        return None
 
     def fetch_by_date(self, d: date) -> Draw | None:
-        """Fetch a specific draw date from GLO."""
-        # GLO archive URL pattern varies; try common format
-        url = f"{GLO_BASE}/result/{d.year}{d.month:02d}{d.day:02d}.html"
-        try:
-            html, _ = fetch_url(url, "glo", session=self._session)
-            return self._parser.parse(html, url)
-        except RequestException as e:
-            logger.warning("GLO fetch_by_date failed for %s: %s", d, e)
-            return None
+        """STUBBED — returns None until Selenium integration is added."""
+        logger.debug(
+            "GLOScraper.fetch_by_date: stubbed, skipping %s", d.isoformat()
+        )
+        return None
