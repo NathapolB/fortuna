@@ -1,8 +1,8 @@
 {
   "target_draw_id": "2026-05-16",
-  "frozen_at": "2026-05-03T10:35:32.440211+07:00",
-  "predict_started_at": "2026-05-03T10:35:19.721504+07:00",
-  "git_sha_at_freeze": "c2df35a3148b6ffb9ed5fe1a814162b2c8fe18f6",
+  "frozen_at": "2026-05-03T10:55:59.367454+07:00",
+  "predict_started_at": "2026-05-03T10:55:46.439939+07:00",
+  "git_sha_at_freeze": "04b3a9a49d6ceac2ab6285ed8ece1686b6ce19b2",
   "model_versions": {
     "frequency-bayes-v1": "c421258e975a",
     "markov-v1": "a380af656b46",
@@ -13,11 +13,11 @@
   "picks": {
     "first6": [
       {
-        "value": "011000",
+        "value": "943155",
         "rank": 1
       },
       {
-        "value": "943155",
+        "value": "963195",
         "rank": 2
       }
     ],
@@ -60,5 +60,5 @@
   },
   "total_tickets": 10,
   "total_cost_thb": 800,
-  "picks_sha256": "828a6e09b9898bdf47fbe2b362832263d573d5a4cf1334aed831bdcfeffb6472"
+  "picks_sha256": "b4e87810fc26b57d20b45ade03134972f9811e3878c6b0b932f5a70aa3fe2dd0"
 }
