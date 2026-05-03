@@ -1,0 +1,66 @@
+{
+  "target_draw_id": "2026-05-16",
+  "frozen_at": "2026-05-03T10:55:59.367454+07:00",
+  "predict_started_at": "2026-05-03T10:55:46.439939+07:00",
+  "git_sha_at_freeze": "04b3a9a49d6ceac2ab6285ed8ece1686b6ce19b2",
+  "model_versions": {
+    "frequency-bayes-v1": "c421258e975a",
+    "markov-v1": "a380af656b46",
+    "lstm-v1": "12a6b26d5428",
+    "rl-qlearn-v1": "c6b7b60d40d3"
+  },
+  "ensemble_method": "simple_average",
+  "picks": {
+    "first6": [
+      {
+        "value": "943155",
+        "rank": 1
+      },
+      {
+        "value": "963195",
+        "rank": 2
+      }
+    ],
+    "three_back": [
+      {
+        "value": "008",
+        "rank": 1
+      },
+      {
+        "value": "213",
+        "rank": 2
+      },
+      {
+        "value": "113",
+        "rank": 3
+      }
+    ],
+    "two_back": [
+      {
+        "value": "21",
+        "rank": 1
+      },
+      {
+        "value": "51",
+        "rank": 2
+      },
+      {
+        "value": "25",
+        "rank": 3
+      },
+      {
+        "value": "26",
+        "rank": 4
+      },
+      {
+        "value": "55",
+        "rank": 5
+      }
+    ]
+  },
+  "total_tickets": 10,
+  "total_cost_thb": 800,
+  "picks_sha256": "b4e87810fc26b57d20b45ade03134972f9811e3878c6b0b932f5a70aa3fe2dd0",
+  "freeze_commit_sha": "fb1e37b4cf6f94c13fd1b09791d53527d161c14f",
+  "notion_page_url": "https://www.notion.so/Fortuna-16-2569-355d18557159815abd59eb1c0cdaecff"
+}
