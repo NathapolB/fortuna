@@ -1,5 +1,7 @@
-"""Q-learning RL agent. Phase 2. SPEC §4."""
+"""Q-learning RL agent — re-export from rl_qlearn. Phase 2. SPEC §4."""
 
 from __future__ import annotations
 
-# Phase 2 stub
+from fortuna.models.rl_qlearn import RLQLearner
+
+__all__ = ["RLQLearner"]
