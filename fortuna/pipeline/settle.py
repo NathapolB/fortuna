@@ -6,6 +6,7 @@ Runs after draw results published (~19:00 draw day):
   3. Insert into outcomes table (cost_thb, payout_thb, hit bool per ticket)
   4. Update model_runs table with brier/log-loss/hit-rate
   5. Trigger journal entry generation
+  6. Update Notion page status to "Settled" and append results (non-blocking)
 """
 
 from __future__ import annotations
@@ -48,6 +49,21 @@ def _match_picks(
         actual = set()
 
     return [p["value"] in actual for p in picks]
+
+
+def _get_notion_page_id(conn: sqlite3.Connection, draw_id: str) -> str | None:
+    """Fetch the Notion page ID for a given draw from the predictions table."""
+    row = conn.execute(
+        """
+        SELECT notion_page_id FROM predictions
+        WHERE draw_id = ? AND model_id = 'ensemble' AND notion_page_id IS NOT NULL
+        LIMIT 1
+        """,
+        (draw_id,),
+    ).fetchone()
+    if row:
+        return row["notion_page_id"]
+    return None
 
 
 def run_settle(draw_id: str) -> dict:
@@ -161,5 +177,18 @@ def run_settle(draw_id: str) -> dict:
         generate_journal(draw_id, summary)
     except Exception as e:
         logger.warning("Journal generation failed: %s", e)
+
+    # --- Enhancement-1: Update Notion page (non-blocking) ---
+    try:
+        notion_page_id = _get_notion_page_id(conn, draw_id)
+        if notion_page_id:
+            from fortuna.pipeline.notion_publisher import settle_prediction_page
+            settle_prediction_page(notion_page_id, summary)
+        else:
+            logger.info(
+                "No Notion page ID found for draw %s — skipping Notion settle update", draw_id
+            )
+    except Exception as e:
+        logger.warning("Notion settle update failed (non-blocking): %s", e)
 
     return summary

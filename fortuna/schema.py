@@ -151,10 +151,12 @@ CREATE TABLE IF NOT EXISTS predictions (
     purchased          INTEGER DEFAULT 0,
     frozen_at          TEXT NOT NULL,
     freeze_commit_sha  TEXT,
+    notion_page_id     TEXT,          -- Notion page ID set after publish_prediction()
     UNIQUE (draw_id, model_id, prize_type, pick_rank),
     UNIQUE (draw_id, model_id, prize_type, pick_value)
 );
 -- Both UNIQUE constraints coexist intentionally. See SPEC §2.2 fix #1 note.
+-- notion_page_id added in Enhancement-1 (v2.2). Migration: scripts/migrate_add_notion_page_id.py
 
 -- post-draw settlement
 CREATE TABLE IF NOT EXISTS outcomes (

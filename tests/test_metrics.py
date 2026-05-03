@@ -116,8 +116,9 @@ def test_bh_fdr_correction():
     assert len(reject) == len(p_values)
     assert len(corrected) == len(p_values)
     # At alpha=0.05, 0.001 and 0.01 should typically be rejected
-    assert reject[0] is True   # p=0.001 — clearly significant
-    assert reject[-1] is False  # p=0.5 — not significant
+    # Use bool() cast to handle numpy.bool_ vs Python bool identity comparison
+    assert bool(reject[0]) is True   # p=0.001 — clearly significant
+    assert bool(reject[-1]) is False  # p=0.5 — not significant
 
 
 def test_bh_fdr_empty():

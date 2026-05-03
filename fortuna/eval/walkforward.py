@@ -4,7 +4,17 @@ Two leakage guards (SPEC §7.3):
   1. target_draw_id not in {d.draw_id for d in ctx.draws}
   2. feature.computed_at < draw_cutoff(target_draw_id)
 
-draw_cutoff(draw_id) = 06:00 Asia/Bangkok on draw_date.
+draw_cutoff semantics (v2.2 update):
+  - Live predict: cutoff = predict_started_at (the moment run_predict() was called).
+    Recorded in prediction payload as "predict_started_at". Since we predict ~14
+    days early (day 2 or 17), this guard is normally never triggered.
+  - Backtest / walk-forward CV: cutoff = T - 14 days, where T = target draw date.
+    Enforced by the caller via allow_leak=True + manual feature date filtering.
+    draw_cutoff(draw_id) returns 06:00 Asia/Bangkok on draw_date as a conservative
+    proxy for the T-14 boundary.
+
+In predict.py (Enhancement-3): calling run_predict() after draw_cutoff raises
+ValueError unless allow_leak=True is passed (testing/backtest only).
 """
 
 from __future__ import annotations
@@ -28,6 +38,12 @@ def draw_cutoff(draw_id: str) -> datetime:
     """Return 06:00 Asia/Bangkok on the draw_date.
 
     SPEC §7.3: Features must be computed before this timestamp to be leak-free.
+
+    Usage:
+      - Live predict: use predict_started_at (not this function) as the actual
+        cutoff boundary. This function is the conservative upper bound.
+      - Backtest: use draw_cutoff(T) as a proxy for T - 14 days leakage boundary.
+        Features with computed_at >= draw_cutoff(T) are considered leaked.
     """
     d = datetime.strptime(draw_id, "%Y-%m-%d").date()
     return datetime(d.year, d.month, d.day, 6, 0, 0, tzinfo=BKK)
@@ -66,6 +82,10 @@ def walk_forward_cv(
       - Train model on draws[0..T-1]
       - Predict draw[T]
       - Score vs actual
+
+    Leakage boundary for backtest: features for draw T must have
+    computed_at < draw_cutoff(T), equivalently computed > 14 days before T
+    (since we predict on day T-14 in live mode).
 
     Returns list of result dicts per evaluated draw.
 

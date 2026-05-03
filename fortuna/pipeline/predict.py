@@ -7,6 +7,11 @@ Steps:
   4. Write data/exports/<date>-prediction.json with picks, sha256, git_sha_at_freeze
   5. git add + commit + push (tamper-evidence anchor)
   6. Capture commit SHA -> store in DB predictions.freeze_commit_sha
+  7. Publish prediction page to Notion (non-blocking; skipped if token absent)
+
+Leakage guard (Enhancement-3):
+  In live mode (allow_leak=False, default), raises ValueError if called after
+  draw cutoff. Pass allow_leak=True only in test/backtest scenarios.
 """
 
 from __future__ import annotations
@@ -97,7 +102,8 @@ def _git_current_sha() -> str:
 def _git_freeze_prediction(export_path: Path) -> str:
     """Commit and push prediction file. Returns commit SHA.
 
-    SPEC §6: push must succeed BEFORE 06:00 Asia/Bangkok on draw day.
+    SPEC §6: push must succeed BEFORE 07:00 Asia/Bangkok on predict day
+    (day 2 or 17 of month — 14 days before draw).
     """
     rel_path = export_path.relative_to(REPO_ROOT)
 
@@ -124,24 +130,47 @@ def _git_freeze_prediction(export_path: Path) -> str:
 # ---------------------------------------------------------------------------
 
 
-def run_predict(target_date: str, dry_run: bool = False) -> dict:
+def run_predict(
+    target_date: str,
+    dry_run: bool = False,
+    allow_leak: bool = False,
+) -> dict:
     """Run prediction pipeline for target_date (YYYY-MM-DD).
 
-    Returns prediction dict with picks + metadata.
+    Args:
+        target_date: Draw date to predict for (YYYY-MM-DD).
+        dry_run: If True, skip git push. Useful for testing.
+        allow_leak: If True, downgrade the post-cutoff leakage guard from a
+                    hard ValueError to a warning. Intended for backtest/test
+                    scenarios ONLY. Default False (hard block in live mode).
+
+    Returns:
+        Prediction dict with picks + metadata.
+
+    Raises:
+        ValueError: If current time is >= draw cutoff AND allow_leak=False.
     """
     check_not_icloud()
 
     from fortuna.eval.walkforward import draw_cutoff
 
-    # Leakage guard: verify we are before cutoff
+    # --- Enhancement-3: Leakage guard (hard block unless allow_leak) ---
+    # For live predict, cutoff = predict_started_at (now). We predict ~14 days
+    # early (day 2/17), so this guard is normally never triggered.
+    # For backtest, cutoff = T - 14 days (enforced by caller; allow_leak=True).
+    predict_started_at = datetime.now(BKK)
     cutoff = draw_cutoff(target_date)
-    now_bkk = datetime.now(BKK)
-    if now_bkk >= cutoff:
-        logger.warning(
-            "Current time %s >= cutoff %s — prediction is AFTER cutoff, proceed with caution",
-            now_bkk.isoformat(),
-            cutoff.isoformat(),
+    if predict_started_at >= cutoff:
+        msg = (
+            f"LEAKAGE GUARD: Current time {predict_started_at.isoformat()} >= "
+            f"draw cutoff {cutoff.isoformat()} for draw {target_date}. "
+            "Features computed after cutoff are LEAKED. "
+            "Re-run earlier, or pass allow_leak=True (testing only)."
         )
+        if allow_leak:
+            logger.warning(msg)
+        else:
+            raise ValueError(msg)
 
     # Load draw history
     store = DrawStore()
@@ -254,6 +283,7 @@ def run_predict(target_date: str, dry_run: bool = False) -> dict:
     payload = {
         "target_draw_id": target_date,
         "frozen_at": frozen_at,
+        "predict_started_at": predict_started_at.isoformat(),
         "git_sha_at_freeze": git_sha,
         "model_versions": model_versions,
         "ensemble_method": "simple_average",
@@ -311,6 +341,37 @@ def run_predict(target_date: str, dry_run: bool = False) -> dict:
                 frozen_at=frozen_at,
                 freeze_commit_sha=payload.get("freeze_commit_sha"),
             )
+
+    # --- Enhancement-1: Notion publish (non-blocking) ---
+    notion_page_url: str | None = None
+    try:
+        from fortuna.pipeline.notion_publisher import publish_prediction
+        notion_page_url = publish_prediction(payload)
+        if notion_page_url:
+            payload["notion_page_url"] = notion_page_url
+            # Persist page URL to export file
+            with open(export_path, "w") as f:
+                json.dump(payload, f, indent=2, ensure_ascii=False)
+            # Store page ID in DB for later settlement update
+            # Extract page ID from URL (last path segment, strip dashes)
+            try:
+                page_id_raw = notion_page_url.rstrip("/").split("/")[-1]
+                # Notion page IDs may be in URL as 32-char hex (no dashes) or with dashes
+                if "-" not in page_id_raw and len(page_id_raw) >= 32:
+                    page_id = page_id_raw[-32:]
+                    formatted = f"{page_id[:8]}-{page_id[8:12]}-{page_id[12:16]}-{page_id[16:20]}-{page_id[20:]}"
+                else:
+                    formatted = page_id_raw
+                conn.execute(
+                    "UPDATE predictions SET notion_page_id = ? WHERE draw_id = ? AND model_id = 'ensemble'",
+                    (formatted, target_date),
+                )
+                conn.commit()
+                logger.info("Stored Notion page ID %s for draw %s", formatted, target_date)
+            except Exception as e:
+                logger.warning("Could not store Notion page ID: %s", e)
+    except Exception as e:
+        logger.warning("Notion publish failed (non-blocking): %s", e)
 
     logger.info(
         "Prediction complete: %d tickets for draw %s", total_tickets, target_date
