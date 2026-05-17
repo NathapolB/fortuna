@@ -353,15 +353,17 @@ def run_predict(
             with open(export_path, "w") as f:
                 json.dump(payload, f, indent=2, ensure_ascii=False)
             # Store page ID in DB for later settlement update
-            # Extract page ID from URL (last path segment, strip dashes)
+            # URL ends with "<slug>-<32hex>"; we want only the trailing 32-hex
+            # UUID (formatted with dashes) since Notion API requires UUID form.
             try:
+                import re
                 page_id_raw = notion_page_url.rstrip("/").split("/")[-1]
-                # Notion page IDs may be in URL as 32-char hex (no dashes) or with dashes
-                if "-" not in page_id_raw and len(page_id_raw) >= 32:
-                    page_id = page_id_raw[-32:]
-                    formatted = f"{page_id[:8]}-{page_id[8:12]}-{page_id[12:16]}-{page_id[16:20]}-{page_id[20:]}"
+                m = re.search(r"([0-9a-f]{32})$", page_id_raw)
+                if m:
+                    h = m.group(1)
+                    formatted = f"{h[:8]}-{h[8:12]}-{h[12:16]}-{h[16:20]}-{h[20:]}"
                 else:
-                    formatted = page_id_raw
+                    formatted = page_id_raw  # fallback — will likely fail Notion validation
                 conn.execute(
                     "UPDATE predictions SET notion_page_id = ? WHERE draw_id = ? AND model_id = 'ensemble'",
                     (formatted, target_date),

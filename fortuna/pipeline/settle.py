@@ -17,7 +17,7 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-from fortuna.config import BKK, EXPORTS_DIR, PAYOUTS, TICKET_COST_THB, check_not_icloud
+from fortuna.config import BKK, EXPORTS_DIR, PAYOUTS, PAYOUTS_PAO_TANG, TICKET_COST_THB, check_not_icloud
 from fortuna.store import DrawStore, get_or_init_db, insert_outcome
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,11 @@ def _match_picks(
     prize_type: str,
     actual_draw,
 ) -> list[bool]:
-    """Match pick values against actual draw results. Returns hit list."""
+    """Match pick values against actual draw results. Returns hit list.
+
+    Legacy bucket-mode matcher — kept for backward compat with old prediction
+    exports (pre-v2.4). New code path uses _score_ticket_multi_prize().
+    """
     if prize_type == "first6":
         actual = {actual_draw.first_prize}
     elif prize_type == "three_back":
@@ -49,6 +53,53 @@ def _match_picks(
         actual = set()
 
     return [p["value"] in actual for p in picks]
+
+
+def _score_ticket_multi_prize(ticket_value: str, actual_draw) -> dict[str, int]:
+    """Score one ticket against ALL Pao Tang prize types (v2.4).
+
+    `ticket_value` may be 2, 3, or 6 digits. For shorter values (legacy 2-back /
+    3-back exports), we check only the prize types that apply to that length.
+
+    Returns dict of {prize_type: payout_thb} for each hit. Empty if no hit.
+    """
+    hits: dict[str, int] = {}
+
+    first = actual_draw.first_prize                          # str, 6 digits
+    near = set(actual_draw.first_prize_near or [])           # 2 numbers, 6 digits
+    front3_set = set(actual_draw.three_digit_front or [])    # 2 numbers, 3 digits
+    back3_set = set(actual_draw.three_digit_back or [])      # 2 numbers, 3 digits
+    back2 = actual_draw.two_digit_back                       # str, 2 digits
+
+    L = len(ticket_value)
+
+    if L == 6:
+        # Full 6-digit ticket — check every prize type
+        if ticket_value == first:
+            hits["first1"] = PAYOUTS_PAO_TANG["first1"]
+        elif ticket_value in near:
+            hits["first_near"] = PAYOUTS_PAO_TANG["first_near"]
+        if ticket_value[:3] in front3_set:
+            hits["front3"] = PAYOUTS_PAO_TANG["front3"]
+        if ticket_value[-3:] in back3_set:
+            hits["back3"] = PAYOUTS_PAO_TANG["back3"]
+        if ticket_value[-2:] == back2:
+            hits["back2"] = PAYOUTS_PAO_TANG["back2"]
+
+    elif L == 3:
+        # 3-digit pattern (legacy three_back pick) — Nash buys a 6-digit ticket
+        # ending with this pattern. Check back3 exact + back2 partial.
+        if ticket_value in back3_set:
+            hits["back3"] = PAYOUTS_PAO_TANG["back3"]
+        if ticket_value[-2:] == back2:
+            hits["back2"] = PAYOUTS_PAO_TANG["back2"]
+
+    elif L == 2:
+        # 2-digit pattern (legacy two_back pick) — pure back2 lottery
+        if ticket_value == back2:
+            hits["back2"] = PAYOUTS_PAO_TANG["back2"]
+
+    return hits
 
 
 def _get_notion_page_id(conn: sqlite3.Connection, draw_id: str) -> str | None:
@@ -114,23 +165,34 @@ def run_settle(draw_id: str) -> dict:
     total_payout = 0
 
     for prize_type, picks_list in prediction.get("picks", {}).items():
-        hits = _match_picks(picks_list, prize_type, actual)
-        payout_per_hit = PAYOUTS.get(prize_type, 0)
+        # Multi-prize scoring (v2.4): every ticket checks ALL Pao Tang prize
+        # types. Legacy `prize_type` here is just the bucket the picker used to
+        # generate the value — settlement is bucket-agnostic.
+        per_ticket_hits: list[dict[str, int]] = []
+        per_ticket_payout: list[int] = []
+        any_hits: list[bool] = []
+
+        for pick in picks_list:
+            ticket_hits = _score_ticket_multi_prize(pick["value"], actual)
+            payout = sum(ticket_hits.values())
+            per_ticket_hits.append(ticket_hits)
+            per_ticket_payout.append(payout)
+            any_hits.append(bool(ticket_hits))
 
         prize_summary = {
             "picks": picks_list,
-            "hits": hits,
-            "n_hits": sum(hits),
+            "per_ticket_hits": per_ticket_hits,
+            "per_ticket_payout_thb": per_ticket_payout,
+            "n_tickets_with_any_hit": sum(any_hits),
             "n_tickets": len(picks_list),
             "cost_thb": len(picks_list) * TICKET_COST_THB,
-            "payout_thb": sum(hits) * payout_per_hit,
+            "payout_thb": sum(per_ticket_payout),
         }
         summary["results"][prize_type] = prize_summary
         total_cost += prize_summary["cost_thb"]
         total_payout += prize_summary["payout_thb"]
 
         # Insert outcomes into DB
-        # Get pred_ids from DB
         cur = conn.execute(
             """
             SELECT pred_id, pick_value, pick_rank
@@ -142,19 +204,18 @@ def run_settle(draw_id: str) -> dict:
         )
         db_preds = {row["pick_value"]: row["pred_id"] for row in cur.fetchall()}
 
-        for pick, hit in zip(picks_list, hits):
+        for pick, hit_dict, ticket_payout in zip(picks_list, per_ticket_hits, per_ticket_payout):
             value = pick["value"]
             pred_id = db_preds.get(value)
             if pred_id is None:
                 logger.warning("No pred_id found for pick %s/%s/%s", draw_id, prize_type, value)
                 continue
 
-            payout = payout_per_hit if hit else 0
             insert_outcome(
                 conn=conn,
                 pred_id=pred_id,
-                hit=bool(hit),
-                payout_thb=payout,
+                hit=bool(hit_dict),
+                payout_thb=ticket_payout,
                 cost_thb=TICKET_COST_THB,
                 settled_at=settled_at,
             )

@@ -50,13 +50,27 @@ BKK = ZoneInfo("Asia/Bangkok")
 DRAW_CUTOFF_TIME = time(6, 0, 0)
 
 # ---------------------------------------------------------------------------
-# Payout constants (SPEC §2.5)
+# Payout constants (SPEC §2.5 — v2.4 multi-prize Pao Tang rates)
 # ---------------------------------------------------------------------------
 
+# Legacy "exact-bucket" payouts — kept for backward compat with old code paths
+# (frequency-bayes / markov / lstm scoring still reference these for prize bucket sizing).
 PAYOUTS: dict[str, int] = {
     "first6": 6_000_000,
     "three_back": 4_000,
     "two_back": 2_000,
+}
+
+# Multi-prize Pao Tang settlement (v2.4) — every 6-digit ticket auto-checks
+# all 5 hit types below. Rates = net amount Nash receives in Pao Tang wallet
+# (back2 confirmed 1,970 after platform fee, 16 พ.ค. 2569).
+# NOTE: รางวัลที่ 2–5 + bonus ยังไม่เก็บใน scraper (bonus_prizes={}) → ทำใน Phase 3.
+PAYOUTS_PAO_TANG: dict[str, int] = {
+    "first1":     6_000_000,   # รางวัลที่ 1 (exact 6 digits)
+    "first_near":   100_000,   # ข้างเคียงรางวัลที่ 1 (±1 from first1)
+    "front3":         4_000,   # 3 หลักแรก match 1 ใน 2 หมายเลข
+    "back3":          4_000,   # 3 หลักท้าย match 1 ใน 2 หมายเลข
+    "back2":          1_970,   # 2 หลักท้าย match (net หลังหัก fee เป๋าตัง)
 }
 
 TICKET_COST_THB = 80  # Pao Tang official wholesale price
@@ -67,13 +81,13 @@ BREAK_EVEN: dict[str, float] = {
 }
 
 # ---------------------------------------------------------------------------
-# Pick split (locked 2/3/5 — SPEC §13 v2.1)
+# Pick split (v2.4 — all 10 tickets are 6-digit, lose old 2/3/5 split)
 # ---------------------------------------------------------------------------
 
 PICK_SPLIT: dict[str, int] = {
-    "first6": 2,
-    "three_back": 3,
-    "two_back": 5,
+    "first6": 10,
+    "three_back": 0,
+    "two_back": 0,
 }
 
 TOTAL_TICKETS_PER_DRAW = sum(PICK_SPLIT.values())  # 10
