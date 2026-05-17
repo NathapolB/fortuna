@@ -1,59 +1,59 @@
 {
   "_comment": "Active model registry. Updated by training pipeline.",
   "schema_version": 1,
-  "last_updated": "2026-05-03T10:25:23.723924+07:00",
+  "last_updated": "2026-05-17T23:35:26.430593+07:00",
   "models": [
     {
       "model_id": "frequency-bayes-v1",
       "version": "1.0",
       "fingerprint": "c421258e975a",
-      "train_data_hash": "de23c65ece281d99",
-      "train_start": "2007-01-16",
-      "train_end": "2026-04-16",
-      "n_draws": 369,
-      "holdout_brier": 0.013598521716340753,
-      "holdout_hit_rate": 0.013888888888888888,
-      "git_sha": "c2df35a3148b6ffb9ed5fe1a814162b2c8fe18f6",
-      "created_at": "2026-05-03T10:25:23.723924+07:00"
+      "train_data_hash": "816329dd09abdd38",
+      "train_start": "2006-12-30",
+      "train_end": "2026-05-16",
+      "n_draws": 372,
+      "holdout_brier": 0.013236638419442738,
+      "holdout_hit_rate": 0.013513513513513514,
+      "git_sha": "f58bbd433c5dde0f07df8a81a4cae19bb80ff75b",
+      "created_at": "2026-05-17T23:35:26.430593+07:00"
     },
     {
       "model_id": "markov-v1",
       "version": "1.0",
       "fingerprint": "a380af656b46",
-      "train_data_hash": "de23c65ece281d99",
-      "train_start": "2007-01-16",
-      "train_end": "2026-04-16",
-      "n_draws": 369,
-      "holdout_brier": 0.1194616582308245,
-      "holdout_hit_rate": 0.125,
-      "git_sha": "c2df35a3148b6ffb9ed5fe1a814162b2c8fe18f6",
-      "created_at": "2026-05-03T10:25:23.723924+07:00"
+      "train_data_hash": "816329dd09abdd38",
+      "train_start": "2006-12-30",
+      "train_end": "2026-05-16",
+      "n_draws": 372,
+      "holdout_brier": 0.09011424742684901,
+      "holdout_hit_rate": 0.0945945945945946,
+      "git_sha": "f58bbd433c5dde0f07df8a81a4cae19bb80ff75b",
+      "created_at": "2026-05-17T23:35:26.430593+07:00"
     },
     {
       "model_id": "lstm-v1",
       "version": "1.0",
       "fingerprint": "12a6b26d5428",
-      "train_data_hash": "de23c65ece281d99",
-      "train_start": "2007-01-16",
-      "train_end": "2026-04-16",
-      "n_draws": 369,
-      "holdout_brier": 0.30402898899215985,
-      "holdout_hit_rate": 0.5416666666666666,
-      "git_sha": "c2df35a3148b6ffb9ed5fe1a814162b2c8fe18f6",
-      "created_at": "2026-05-03T10:25:23.723924+07:00"
+      "train_data_hash": "816329dd09abdd38",
+      "train_start": "2006-12-30",
+      "train_end": "2026-05-16",
+      "n_draws": 372,
+      "holdout_brier": 0.2655966522559975,
+      "holdout_hit_rate": 0.527027027027027,
+      "git_sha": "f58bbd433c5dde0f07df8a81a4cae19bb80ff75b",
+      "created_at": "2026-05-17T23:35:26.430593+07:00"
     },
     {
       "model_id": "rl-qlearn-v1",
       "version": "1.0",
       "fingerprint": "c6b7b60d40d3",
-      "train_data_hash": "de23c65ece281d99",
-      "train_start": "2007-01-16",
-      "train_end": "2026-04-16",
-      "n_draws": 369,
-      "holdout_brier": 0.9861111109138889,
-      "holdout_hit_rate": 0.013888888888888888,
-      "git_sha": "c2df35a3148b6ffb9ed5fe1a814162b2c8fe18f6",
-      "created_at": "2026-05-03T10:25:23.723924+07:00"
+      "train_data_hash": "816329dd09abdd38",
+      "train_start": "2006-12-30",
+      "train_end": "2026-05-16",
+      "n_draws": 372,
+      "holdout_brier": 0.9729729727783784,
+      "holdout_hit_rate": 0.02702702702702703,
+      "git_sha": "f58bbd433c5dde0f07df8a81a4cae19bb80ff75b",
+      "created_at": "2026-05-17T23:35:26.430593+07:00"
     }
   ]
 }
