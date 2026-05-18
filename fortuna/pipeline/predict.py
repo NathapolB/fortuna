@@ -269,8 +269,14 @@ def run_predict(
         merged = stacker.predict_ensemble(pt, all_candidates, top_k * 2)
         ensemble_picks[prize_type_str] = merged
 
+    # Recency-bias guard: collect first_prizes of last 100 actual draws.
+    # Lottery is iid → P(repeat winner) = 1/1M; reject if model echoes recent.
+    recent_winners: set[str] = {
+        d.first_prize for d in sorted(training_draws, key=lambda x: x.draw_id)[-100:]
+    }
+
     # Run picker to select final tickets
-    final_picks = select_picks(ensemble_picks)
+    final_picks = select_picks(ensemble_picks, recent_winners=recent_winners)
 
     # Validate counts
     total_tickets = sum(len(v) for v in final_picks.values())

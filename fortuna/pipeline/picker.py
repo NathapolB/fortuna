@@ -118,18 +118,25 @@ def _generate_fallback_picks(
 
 def select_picks(
     ensemble_picks: dict[str, list[Pick]],
+    recent_winners: set[str] | None = None,
 ) -> dict[str, list[str]]:
     """Select final picks from ensemble output, enforcing diversity rules.
 
     ensemble_picks[prize_type] = list of Pick objects sorted by confidence desc.
+    recent_winners: optional set of recent first_prize 6-digit values that
+        should be rejected (recency-bias guard). Applied to first6 only —
+        prevents top-1 prediction from echoing the most-recent draw, which is
+        a known failure mode of LSTM/Markov when the lottery is actually iid
+        (P(repeat) = 1/1M but recurrent models will weight it ~1).
 
     Returns {prize_type: [pick_value, ...]} with exactly PICK_SPLIT[prize_type] picks.
     Enforces:
-      - first6: Hamming >= 2 between any two picks
+      - first6: Hamming >= 2 between any two picks + not in recent_winners
       - three_back: Hamming >= 1 (all distinct)
       - two_back: no diversity filter (100 values only)
     """
     result: dict[str, list[str]] = {}
+    recent_winners = recent_winners or set()
 
     for prize_type_str, target_count in PICK_SPLIT.items():
         prize_type = cast(PrizeType, prize_type_str)
@@ -144,7 +151,8 @@ def select_picks(
         }[prize_type_str]
 
         selected: list[str] = []
-        excluded: set[str] = set()
+        # Seed excluded with recent winners for first6 only
+        excluded: set[str] = set(recent_winners) if prize_type_str == "first6" else set()
 
         # Iterate through candidates in confidence order
         for pick in picks:

@@ -1,0 +1,350 @@
+{
+  "rows": [
+    {
+      "draw": "2024-12-01",
+      "actual_first": "669843",
+      "actual_back2": "61",
+      "new_wins": "3/10",
+      "new_acc": "30%",
+      "new_pnl": 5110,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    },
+    {
+      "draw": "2024-12-16",
+      "actual_first": "097863",
+      "actual_back2": "21",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    },
+    {
+      "draw": "2025-01-17",
+      "actual_first": "807779",
+      "actual_back2": "23",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    },
+    {
+      "draw": "2025-02-01",
+      "actual_first": "558700",
+      "actual_back2": "51",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    },
+    {
+      "draw": "2025-02-16",
+      "actual_first": "847377",
+      "actual_back2": "50",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "1/10",
+      "old_acc": "10%",
+      "old_pnl": 3200
+    },
+    {
+      "draw": "2025-03-01",
+      "actual_first": "818894",
+      "actual_back2": "54",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    },
+    {
+      "draw": "2025-03-16",
+      "actual_first": "757563",
+      "actual_back2": "32",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    },
+    {
+      "draw": "2025-04-01",
+      "actual_first": "669687",
+      "actual_back2": "36",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    },
+    {
+      "draw": "2025-05-16",
+      "actual_first": "251309",
+      "actual_back2": "87",
+      "new_wins": "2/10",
+      "new_acc": "20%",
+      "new_pnl": 3140,
+      "old_wins": "1/10",
+      "old_acc": "10%",
+      "old_pnl": 1170
+    },
+    {
+      "draw": "2025-06-01",
+      "actual_first": "559352",
+      "actual_back2": "20",
+      "new_wins": "6/10",
+      "new_acc": "60%",
+      "new_pnl": 23200,
+      "old_wins": "1/10",
+      "old_acc": "10%",
+      "old_pnl": 3200
+    },
+    {
+      "draw": "2025-06-16",
+      "actual_first": "507392",
+      "actual_back2": "06",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    },
+    {
+      "draw": "2025-07-01",
+      "actual_first": "949246",
+      "actual_back2": "91",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    },
+    {
+      "draw": "2025-07-16",
+      "actual_first": "245324",
+      "actual_back2": "26",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    },
+    {
+      "draw": "2025-08-01",
+      "actual_first": "811852",
+      "actual_back2": "50",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    },
+    {
+      "draw": "2025-09-01",
+      "actual_first": "506356",
+      "actual_back2": "31",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    },
+    {
+      "draw": "2025-09-16",
+      "actual_first": "074646",
+      "actual_back2": "58",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    },
+    {
+      "draw": "2025-10-01",
+      "actual_first": "876978",
+      "actual_back2": "77",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    },
+    {
+      "draw": "2025-10-16",
+      "actual_first": "059696",
+      "actual_back2": "61",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    },
+    {
+      "draw": "2025-11-01",
+      "actual_first": "345898",
+      "actual_back2": "87",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    },
+    {
+      "draw": "2025-11-16",
+      "actual_first": "458145",
+      "actual_back2": "37",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    },
+    {
+      "draw": "2025-12-01",
+      "actual_first": "461252",
+      "actual_back2": "22",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    },
+    {
+      "draw": "2025-12-16",
+      "actual_first": "763895",
+      "actual_back2": "52",
+      "new_wins": "7/10",
+      "new_acc": "70%",
+      "new_pnl": 12990,
+      "old_wins": "2/10",
+      "old_acc": "20%",
+      "old_pnl": 3140
+    },
+    {
+      "draw": "2026-02-01",
+      "actual_first": "174629",
+      "actual_back2": "48",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    },
+    {
+      "draw": "2026-02-16",
+      "actual_first": "340563",
+      "actual_back2": "07",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    },
+    {
+      "draw": "2026-03-01",
+      "actual_first": "820866",
+      "actual_back2": "06",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "1/10",
+      "old_acc": "10%",
+      "old_pnl": 1170
+    },
+    {
+      "draw": "2026-03-16",
+      "actual_first": "833009",
+      "actual_back2": "64",
+      "new_wins": "2/10",
+      "new_acc": "20%",
+      "new_pnl": 3140,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    },
+    {
+      "draw": "2026-04-01",
+      "actual_first": "292514",
+      "actual_back2": "47",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    },
+    {
+      "draw": "2026-04-16",
+      "actual_first": "309612",
+      "actual_back2": "77",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    },
+    {
+      "draw": "2026-05-02",
+      "actual_first": "536077",
+      "actual_back2": "43",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    },
+    {
+      "draw": "2026-05-16",
+      "actual_first": "107387",
+      "actual_back2": "08",
+      "new_wins": "0/10",
+      "new_acc": "0%",
+      "new_pnl": -800,
+      "old_wins": "0/10",
+      "old_acc": "0%",
+      "old_pnl": -800
+    }
+  ],
+  "summary": {
+    "new": {
+      "wins": 20,
+      "total": 300,
+      "acc_pct": 6.666666666666667,
+      "net_pnl": 27580
+    },
+    "old": {
+      "wins": 6,
+      "total": 300,
+      "acc_pct": 2.0,
+      "net_pnl": -8120
+    },
+    "delta_acc_pp": 4.666666666666667,
+    "delta_net_pnl": 35700
+  }
+}

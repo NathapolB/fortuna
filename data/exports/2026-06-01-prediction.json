@@ -58,5 +58,7 @@
   },
   "total_tickets": 10,
   "total_cost_thb": 800,
-  "picks_sha256": "4038a0ce294a147500b7bafecb45d4550c0ea32626ecc13853bc20ccacd04505"
+  "picks_sha256": "4038a0ce294a147500b7bafecb45d4550c0ea32626ecc13853bc20ccacd04505",
+  "freeze_commit_sha": "6f706e768afd9e2bec5f177373362efa51c8e616",
+  "notion_page_url": "https://www.notion.so/Fortuna-1-2569-364d1855715981079f69ed9fef6c545b"
 }
