@@ -1,8 +1,8 @@
 {
   "target_draw_id": "2026-06-01",
-  "frozen_at": "2026-05-17T23:35:49.858388+07:00",
-  "predict_started_at": "2026-05-17T23:35:37.775622+07:00",
-  "git_sha_at_freeze": "f58bbd433c5dde0f07df8a81a4cae19bb80ff75b",
+  "frozen_at": "2026-05-18T22:07:12.957692+07:00",
+  "predict_started_at": "2026-05-18T22:07:00.028591+07:00",
+  "git_sha_at_freeze": "53af46060719e76652a25061984dece62587d0c3",
   "model_versions": {
     "frequency-bayes-v1": "c421258e975a",
     "markov-v1": "a380af656b46",
@@ -13,43 +13,43 @@
   "picks": {
     "first6": [
       {
-        "value": "107387",
+        "value": "107887",
         "rank": 1
       },
       {
-        "value": "107847",
+        "value": "107347",
         "rank": 2
       },
       {
-        "value": "137887",
+        "value": "137387",
         "rank": 3
       },
       {
-        "value": "137347",
+        "value": "007387",
         "rank": 4
       },
       {
-        "value": "007887",
+        "value": "107383",
         "rank": 5
       },
       {
-        "value": "007347",
+        "value": "187187",
         "rank": 6
       },
       {
-        "value": "107883",
+        "value": "137847",
         "rank": 7
       },
       {
-        "value": "107343",
+        "value": "007847",
         "rank": 8
       },
       {
-        "value": "187187",
+        "value": "107843",
         "rank": 9
       },
       {
-        "value": "037387",
+        "value": "001011",
         "rank": 10
       }
     ],
@@ -58,7 +58,5 @@
   },
   "total_tickets": 10,
   "total_cost_thb": 800,
-  "picks_sha256": "cc48c38adbf74e926142d2d50bb00d0fd803727be4f7d6ec2491431b47efd687",
-  "freeze_commit_sha": "c29ea841b96c3f0015ffbf906986dc1e7cad5ccf",
-  "notion_page_url": "https://www.notion.so/Fortuna-1-2569-363d185571598139b84efae2e86e0b90"
+  "picks_sha256": "4038a0ce294a147500b7bafecb45d4550c0ea32626ecc13853bc20ccacd04505"
 }
