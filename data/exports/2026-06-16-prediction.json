@@ -1,0 +1,62 @@
+{
+  "target_draw_id": "2026-06-16",
+  "frozen_at": "2026-06-02T07:02:25.946163+07:00",
+  "predict_started_at": "2026-06-02T07:01:36.938929+07:00",
+  "git_sha_at_freeze": "fbac106e26c4605758ac64faeb9f68d3f6dda795",
+  "model_versions": {
+    "frequency-bayes-v1": "c421258e975a",
+    "markov-v1": "a380af656b46",
+    "lstm-v1": "12a6b26d5428",
+    "rl-qlearn-v1": "c6b7b60d40d3"
+  },
+  "ensemble_method": "simple_average",
+  "picks": {
+    "first6": [
+      {
+        "value": "873374",
+        "rank": 1
+      },
+      {
+        "value": "870378",
+        "rank": 2
+      },
+      {
+        "value": "173378",
+        "rank": 3
+      },
+      {
+        "value": "873778",
+        "rank": 4
+      },
+      {
+        "value": "803378",
+        "rank": 5
+      },
+      {
+        "value": "873328",
+        "rank": 6
+      },
+      {
+        "value": "170374",
+        "rank": 7
+      },
+      {
+        "value": "870774",
+        "rank": 8
+      },
+      {
+        "value": "873397",
+        "rank": 9
+      },
+      {
+        "value": "173774",
+        "rank": 10
+      }
+    ],
+    "three_back": [],
+    "two_back": []
+  },
+  "total_tickets": 10,
+  "total_cost_thb": 800,
+  "picks_sha256": "596ba1559674bd6aeea3fa9c731f8d27dee28b745ef0b392461e9cee28717263"
+}
