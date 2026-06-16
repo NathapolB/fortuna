@@ -239,17 +239,18 @@ def run_settle(draw_id: str) -> dict:
     except Exception as e:
         logger.warning("Journal generation failed: %s", e)
 
-    # --- Enhancement-1: Update Notion page (non-blocking) ---
+    # --- Enhancement-2 (v2.5): Update Align note (non-blocking) ---
+    # notion_page_id column is reused to hold the Align note UUID (see predict.py).
     try:
-        notion_page_id = _get_notion_page_id(conn, draw_id)
-        if notion_page_id:
-            from fortuna.pipeline.notion_publisher import settle_prediction_page
-            settle_prediction_page(notion_page_id, summary)
+        align_note_id = _get_notion_page_id(conn, draw_id)
+        if align_note_id:
+            from fortuna.pipeline.align_publisher import settle_prediction_note
+            settle_prediction_note(align_note_id, summary)
         else:
             logger.info(
-                "No Notion page ID found for draw %s — skipping Notion settle update", draw_id
+                "No Align note id found for draw %s — skipping Align settle update", draw_id
             )
     except Exception as e:
-        logger.warning("Notion settle update failed (non-blocking): %s", e)
+        logger.warning("Align settle update failed (non-blocking): %s", e)
 
     return summary

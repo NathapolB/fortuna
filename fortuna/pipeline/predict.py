@@ -348,38 +348,28 @@ def run_predict(
                 freeze_commit_sha=payload.get("freeze_commit_sha"),
             )
 
-    # --- Enhancement-1: Notion publish (non-blocking) ---
-    notion_page_url: str | None = None
+    # --- Enhancement-2 (v2.5): Align publish (non-blocking) ---
+    # Predictions now land in Nash's Align app ("Lottery" notebook), not Notion.
+    # The Align note UUID is stored in predictions.notion_page_id (reused as the
+    # generic publish-target id) so settlement can update the same note.
     try:
-        from fortuna.pipeline.notion_publisher import publish_prediction
-        notion_page_url = publish_prediction(payload)
-        if notion_page_url:
-            payload["notion_page_url"] = notion_page_url
-            # Persist page URL to export file
+        from fortuna.pipeline.align_publisher import publish_prediction_align
+        align_note_id = publish_prediction_align(payload)
+        if align_note_id:
+            payload["align_note_id"] = align_note_id
             with open(export_path, "w") as f:
                 json.dump(payload, f, indent=2, ensure_ascii=False)
-            # Store page ID in DB for later settlement update
-            # URL ends with "<slug>-<32hex>"; we want only the trailing 32-hex
-            # UUID (formatted with dashes) since Notion API requires UUID form.
             try:
-                import re
-                page_id_raw = notion_page_url.rstrip("/").split("/")[-1]
-                m = re.search(r"([0-9a-f]{32})$", page_id_raw)
-                if m:
-                    h = m.group(1)
-                    formatted = f"{h[:8]}-{h[8:12]}-{h[12:16]}-{h[16:20]}-{h[20:]}"
-                else:
-                    formatted = page_id_raw  # fallback — will likely fail Notion validation
                 conn.execute(
                     "UPDATE predictions SET notion_page_id = ? WHERE draw_id = ? AND model_id = 'ensemble'",
-                    (formatted, target_date),
+                    (align_note_id, target_date),
                 )
                 conn.commit()
-                logger.info("Stored Notion page ID %s for draw %s", formatted, target_date)
+                logger.info("Stored Align note id %s for draw %s", align_note_id, target_date)
             except Exception as e:
-                logger.warning("Could not store Notion page ID: %s", e)
+                logger.warning("Could not store Align note id: %s", e)
     except Exception as e:
-        logger.warning("Notion publish failed (non-blocking): %s", e)
+        logger.warning("Align publish failed (non-blocking): %s", e)
 
     logger.info(
         "Prediction complete: %d tickets for draw %s", total_tickets, target_date
