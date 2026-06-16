@@ -42,6 +42,8 @@ class MetaStacker:
     def _values_for(draw, prize_type: str) -> list[str]:
         if prize_type == "first6":
             return [draw.first_prize]
+        elif prize_type == "three_front":
+            return draw.three_digit_front
         elif prize_type == "three_back":
             return draw.three_digit_back
         elif prize_type == "two_back":
@@ -57,7 +59,7 @@ class MetaStacker:
         walk_results[prize_type] = list of (model_confidences, hit_label) per draw.
         model_confidences = [conf_model0, conf_model1, ..., conf_modelN]
         """
-        for prize_type in ("first6", "three_back", "two_back"):
+        for prize_type in ("first6", "three_front", "three_back", "two_back"):
             records = walk_results.get(prize_type, [])
             if len(records) < 10:
                 self._use_average[prize_type] = True
@@ -192,7 +194,7 @@ class MetaStacker:
     def get_calibration_info(self) -> dict[str, dict]:
         """Return calibration method used per prize type."""
         info = {}
-        for prize_type in ("first6", "three_back", "two_back"):
+        for prize_type in ("first6", "three_front", "three_back", "two_back"):
             use_avg = self._use_average.get(prize_type, True)
             info[prize_type] = {
                 "method": "simple_average" if use_avg else "logistic_stacker",

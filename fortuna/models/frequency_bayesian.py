@@ -49,13 +49,15 @@ class FrequencyBayesian(BaseModel):
 
     @staticmethod
     def _positions_for(prize_type: PrizeType) -> int:
-        return {"first6": 6, "three_back": 3, "two_back": 2}[prize_type]
+        return {"first6": 6, "three_front": 3, "three_back": 3, "two_back": 2}[prize_type]
 
     @staticmethod
     def _values_for(draw, prize_type: PrizeType) -> list[str]:
         """Extract relevant value(s) from a Draw object for a given prize type."""
         if prize_type == "first6":
             return [draw.first_prize]
+        elif prize_type == "three_front":
+            return draw.three_digit_front
         elif prize_type == "three_back":
             return draw.three_digit_back
         elif prize_type == "two_back":
@@ -69,7 +71,7 @@ class FrequencyBayesian(BaseModel):
     def fit(self, ctx: TrainContext) -> None:
         """Train on history in ctx.draws."""
         self._posteriors = {}
-        for prize_type in ("first6", "three_back", "two_back"):
+        for prize_type in ("first6", "three_front", "three_back", "two_back"):
             pt = cast(PrizeType, prize_type)
             n_pos = self._positions_for(pt)
             # Initialize with Dirichlet prior (uniform α = prior_strength for each digit)

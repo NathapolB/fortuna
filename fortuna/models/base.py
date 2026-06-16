@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Literal
 if TYPE_CHECKING:
     from fortuna.schema import Draw
 
-PrizeType = Literal["first6", "three_back", "two_back"]
+PrizeType = Literal["first6", "three_front", "three_back", "two_back"]
 
 
 @dataclass(frozen=True)

@@ -33,7 +33,7 @@ from fortuna.config import (
     check_not_icloud,
 )
 from fortuna.models.base import Pick, PrizeType, TrainContext
-from fortuna.pipeline.picker import select_picks
+from fortuna.pipeline.picker import select_picks, select_picks_532
 from fortuna.store import DrawStore, get_or_init_db, insert_prediction
 
 logger = logging.getLogger(__name__)
@@ -241,21 +241,26 @@ def run_predict(
     # Get predictions from each model
     from fortuna.models.meta_stacker import MetaStacker
 
+    # Strategy 5/3/2 (v2.5) targets 4 prize tiers — including เลขหน้า 3 ตัว.
+    PRIZE_TYPES = ("first6", "three_front", "three_back", "two_back")
+    # Candidate pool depth needed by select_picks_532 per tier.
+    POOL_NEEDED = {"first6": 7, "three_front": 3, "three_back": 3, "two_back": 5}
+
     stacker = MetaStacker(base_models=base_models)
     # Simple average mode (no walk-forward calibration at predict time)
-    stacker._use_average = {pt: True for pt in ("first6", "three_back", "two_back")}
+    stacker._use_average = {pt: True for pt in PRIZE_TYPES}
     n = len(base_models)
-    stacker._weights = {pt: [1.0 / n] * n for pt in ("first6", "three_back", "two_back")}
+    stacker._weights = {pt: [1.0 / n] * n for pt in PRIZE_TYPES}
     stacker._fitted = True
 
     # Collect candidate picks per prize type
     ensemble_picks: dict[str, list[Pick]] = {}
     model_versions: dict[str, str] = {}
 
-    for prize_type_str in ("first6", "three_back", "two_back"):
+    for prize_type_str in PRIZE_TYPES:
         pt = cast(PrizeType, prize_type_str)
         all_candidates: list[list[Pick]] = []
-        top_k = max(PICK_SPLIT[prize_type_str] * 5, 20)
+        top_k = max(POOL_NEEDED[prize_type_str] * 5, 20)
 
         for model in base_models:
             try:
@@ -275,8 +280,12 @@ def run_predict(
         d.first_prize for d in sorted(training_draws, key=lambda x: x.draw_id)[-100:]
     }
 
-    # Run picker to select final tickets
-    final_picks = select_picks(ensemble_picks, recent_winners=recent_winners)
+    # Run picker — strategy 5/3/2 builds 10 prize-targeted 6-digit tickets.
+    ticket_plan = select_picks_532(ensemble_picks, recent_winners=recent_winners)
+
+    # All tickets are 6-digit Pao Tang tickets (settlement is multi-prize and
+    # bucket-agnostic), so they live under the "first6" bucket downstream.
+    final_picks = {"first6": [t["value"] for t in ticket_plan]}
 
     # Validate counts
     total_tickets = sum(len(v) for v in final_picks.values())
@@ -293,6 +302,7 @@ def run_predict(
         "git_sha_at_freeze": git_sha,
         "model_versions": model_versions,
         "ensemble_method": "simple_average",
+        "strategy": "532",  # 5×two_back · 3×front3+back3 · 2×first1
         "picks": {
             prize_type: [
                 {"value": v, "rank": i + 1}
@@ -300,6 +310,7 @@ def run_predict(
             ]
             for prize_type, values in final_picks.items()
         },
+        "ticket_plan": ticket_plan,  # ordered [{value, group, label}] for display
         "total_tickets": total_tickets,
         "total_cost_thb": total_tickets * 80,
     }

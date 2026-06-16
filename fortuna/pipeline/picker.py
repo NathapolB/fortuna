@@ -65,7 +65,7 @@ def _is_unhumanlike(value: str, prize_type: str) -> bool:
 
 def _pad_value(value: str, prize_type: PrizeType) -> str:
     """Ensure value is correct length for prize type."""
-    lengths = {"first6": 6, "three_back": 3, "two_back": 2}
+    lengths = {"first6": 6, "three_front": 3, "three_back": 3, "two_back": 2}
     n = lengths[prize_type]
     return value.zfill(n)
 
@@ -84,7 +84,7 @@ def _generate_fallback_picks(
     list). This prevents consecutive sequential values (000000, 000001) from
     both being accepted when min_hamming >= 2.
     """
-    length = {"first6": 6, "three_back": 3, "two_back": 2}[prize_type]
+    length = {"first6": 6, "three_front": 3, "three_back": 3, "two_back": 2}[prize_type]
     total = 10 ** length
 
     # Local accumulator — starts with the already-selected picks so diversity
@@ -215,3 +215,108 @@ def select_picks(
                     )
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# Strategy 5/3/2 — Nash's prize-targeted ticket construction (v2.5)
+# ---------------------------------------------------------------------------
+#
+# All 10 Pao Tang tickets are 6-digit, but each is CONSTRUCTED to target a
+# specific prize tier (Pao Tang auto-checks every tier, so a ticket can still
+# win others incidentally):
+#   • 5 tickets — เลขท้าย 2 ตัว  : last 2 digits = top-5 two_back picks
+#                                   (leading 4 = best first6 prefixes, varied)
+#   • 3 tickets — เลขหน้า 3 + ท้าย 3 : first 3 = top-3 three_front,
+#                                       last 3 = top-3 three_back (glued)
+#   • 2 tickets — รางวัลที่ 1     : top-2 first6 picks (recency-guarded)
+
+_LEN = {"first6": 6, "three_front": 3, "three_back": 3, "two_back": 2}
+
+
+def _top_values(
+    ensemble_picks: dict[str, list[Pick]],
+    prize_type: str,
+    n: int,
+    exclude: set[str] | None = None,
+) -> list[str]:
+    """Top-n distinct, valid, human-OK values for a prize type (with fallback)."""
+    excl = set(exclude or set())
+    length = _LEN[prize_type]
+    out: list[str] = []
+    for pick in ensemble_picks.get(prize_type, []):
+        v = _pad_value(pick.value, cast(PrizeType, prize_type))
+        if not v.isdigit() or len(v) != length:
+            continue
+        if v in out or v in excl:
+            continue
+        if _is_unhumanlike(v, prize_type):
+            continue
+        # Short tiers (2/3-digit) are ~uniform: skip degenerate all-same-digit
+        # picks (000 / 00 / 111…) — they waste coverage even if model-top.
+        if length <= 3 and len(set(v)) == 1:
+            continue
+        out.append(v)
+        if len(out) >= n:
+            break
+    if len(out) < n:
+        out.extend(
+            _generate_fallback_picks(
+                cast(PrizeType, prize_type), set(out) | excl, n - len(out), 0, out
+            )
+        )
+    return out[:n]
+
+
+def select_picks_532(
+    ensemble_picks: dict[str, list[Pick]],
+    recent_winners: set[str] | None = None,
+) -> list[dict[str, str]]:
+    """Build 10 prize-targeted 6-digit tickets. Returns ordered list of
+    {"value", "group", "label"} — 5 two_back, 3 front3+back3, 2 first1.
+    """
+    recent = set(recent_winners or set())
+
+    first6 = _top_values(ensemble_picks, "first6", 7, exclude=recent)
+    two_back = _top_values(ensemble_picks, "two_back", 5)
+    front3 = _top_values(ensemble_picks, "three_front", 3)
+    back3 = _top_values(ensemble_picks, "three_back", 3)
+
+    tickets: list[dict[str, str]] = []
+
+    # 5 × เลขท้าย 2 ตัว
+    for i in range(5):
+        prefix = (first6[i] if i < len(first6) else first6[0])[:4]
+        tickets.append(
+            {"value": prefix + two_back[i], "group": "two_back", "label": "เลขท้าย 2 ตัว"}
+        )
+
+    # 3 × เลขหน้า 3 + ท้าย 3
+    for i in range(3):
+        tickets.append(
+            {
+                "value": front3[i] + back3[i],
+                "group": "front3_back3",
+                "label": "เลขหน้า 3 + ท้าย 3",
+            }
+        )
+
+    # 2 × รางวัลที่ 1
+    for i in range(2):
+        idx = 5 + i if 5 + i < len(first6) else i
+        tickets.append(
+            {"value": first6[idx], "group": "first1", "label": "รางวัลที่ 1"}
+        )
+
+    # Guarantee 10 distinct 6-digit values — replace collisions with fallbacks.
+    seen: set[str] = set()
+    for t in tickets:
+        if t["value"] in seen or len(t["value"]) != 6 or not t["value"].isdigit():
+            fb = _generate_fallback_picks(
+                cast(PrizeType, "first6"), set(seen), 1, 0, list(seen)
+            )
+            t["value"] = fb[0] if fb else t["value"]
+        seen.add(t["value"])
+
+    assert len(tickets) == 10, f"expected 10 tickets, got {len(tickets)}"
+    assert len({t["value"] for t in tickets}) == 10, "duplicate tickets in 5/3/2 plan"
+    return tickets

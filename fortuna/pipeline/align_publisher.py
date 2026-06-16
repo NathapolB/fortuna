@@ -162,8 +162,34 @@ def _build_doc(prediction: dict) -> dict:
         _txt("ทุกใบเช็คทุกรางวัล: ที่ 1 · ข้างเคียง · 3 ตัวหน้า · 3 ตัวหลัง · 2 ตัวล่าง"),
     ))
 
-    content.append(_heading(3, f"🎟️ เลข {n} ใบ"))
-    content.append(_ordered([[_txt(v, "bold", "code")] for v in values]))
+    # Strategy 5/3/2 — render tickets grouped by prize target if present.
+    plan = prediction.get("ticket_plan")
+    if plan:
+        groups = [
+            ("two_back", "🎲 5 ใบ — เน้นเลขท้าย 2 ตัว"),
+            ("front3_back3", "🎯 3 ใบ — เลขหน้า 3 ตัว + เลขท้าย 3 ตัว"),
+            ("first1", "🥇 2 ใบ — รางวัลที่ 1"),
+        ]
+        for gkey, gtitle in groups:
+            items = [t for t in plan if t.get("group") == gkey]
+            if not items:
+                continue
+            content.append(_heading(3, gtitle))
+            rows: list[list[dict]] = []
+            for t in items:
+                v = t["value"]
+                if gkey == "two_back":
+                    rows.append([_txt(v[:4]), _txt(v[4:], "bold", "code"),
+                                 _txt("  ← ท้าย 2 ตัว")])
+                elif gkey == "front3_back3":
+                    rows.append([_txt(v[:3], "bold", "code"), _txt(" · "),
+                                 _txt(v[3:], "bold", "code")])
+                else:
+                    rows.append([_txt(v, "bold", "code")])
+            content.append(_bullet(rows))
+    else:
+        content.append(_heading(3, f"🎟️ เลข {n} ใบ"))
+        content.append(_ordered([[_txt(v, "bold", "code")] for v in values]))
 
     content.append(_heading(3, "🔒 Verifiable Timestamp"))
     content.append(_para(

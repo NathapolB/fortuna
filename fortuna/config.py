@@ -100,6 +100,7 @@ COST_PER_MONTH_THB = COST_PER_DRAW_THB * 2  # 1600 (1st + 16th)
 
 PRIZE_SPACE: dict[str, int] = {
     "first6": 1_000_000,   # 000000–999999
+    "three_front": 1_000,  # 000–999 (เลขหน้า 3 ตัว)
     "three_back": 1_000,   # 000–999
     "two_back": 100,       # 00–99
 }
