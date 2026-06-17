@@ -1,8 +1,8 @@
 {
   "target_draw_id": "2026-07-01",
-  "frozen_at": "2026-06-17T11:29:45.122119+07:00",
-  "predict_started_at": "2026-06-17T11:29:26.580227+07:00",
-  "git_sha_at_freeze": "55668a59190df473990627485372af1d093c0429",
+  "frozen_at": "2026-06-17T11:47:58.094132+07:00",
+  "predict_started_at": "2026-06-17T11:47:35.376529+07:00",
+  "git_sha_at_freeze": "6c2fc72f1fce129bcd45a08c5ab08e5244bb6b19",
   "model_versions": {
     "frequency-bayes-v1": "c421258e975a",
     "markov-v1": "a380af656b46",
@@ -14,35 +14,35 @@
   "picks": {
     "first6": [
       {
-        "value": "003108",
+        "value": "612101",
         "rank": 1
       },
       {
-        "value": "008305",
+        "value": "249380",
         "rank": 2
       },
       {
-        "value": "005104",
+        "value": "886159",
         "rank": 3
       },
       {
-        "value": "009306",
+        "value": "523338",
         "rank": 4
       },
       {
-        "value": "006103",
+        "value": "160117",
         "rank": 5
       },
       {
-        "value": "002020",
+        "value": "701708",
         "rank": 6
       },
       {
-        "value": "004050",
+        "value": "338335",
         "rank": 7
       },
       {
-        "value": "010058",
+        "value": "975962",
         "rank": 8
       },
       {
@@ -57,42 +57,42 @@
   },
   "ticket_plan": [
     {
-      "value": "003108",
+      "value": "612101",
       "group": "front3_two_back",
       "label": "เลขหน้า 3 + ท้าย 2"
     },
     {
-      "value": "008305",
+      "value": "249380",
       "group": "front3_two_back",
       "label": "เลขหน้า 3 + ท้าย 2"
     },
     {
-      "value": "005104",
+      "value": "886159",
       "group": "front3_two_back",
       "label": "เลขหน้า 3 + ท้าย 2"
     },
     {
-      "value": "009306",
+      "value": "523338",
       "group": "front3_two_back",
       "label": "เลขหน้า 3 + ท้าย 2"
     },
     {
-      "value": "006103",
+      "value": "160117",
       "group": "front3_two_back",
       "label": "เลขหน้า 3 + ท้าย 2"
     },
     {
-      "value": "002020",
+      "value": "701708",
       "group": "front3_back3",
       "label": "เลขหน้า 3 + ท้าย 3"
     },
     {
-      "value": "004050",
+      "value": "338335",
       "group": "front3_back3",
       "label": "เลขหน้า 3 + ท้าย 3"
     },
     {
-      "value": "010058",
+      "value": "975962",
       "group": "front3_back3",
       "label": "เลขหน้า 3 + ท้าย 3"
     },
@@ -109,7 +109,5 @@
   ],
   "total_tickets": 10,
   "total_cost_thb": 800,
-  "picks_sha256": "8ec6ed497f8aa3055e0fa5610d17f6ce370327ff38126b4ecf7ba63ff80577c5",
-  "freeze_commit_sha": "321024af34465e55816a5fe08c8f780e537a21f2",
-  "align_note_id": "99a874e9-a267-4f93-98d7-2f9b485c3962"
+  "picks_sha256": "652eddfdf74f9aa42d60d08a0e3a71f85eb289978a1068fc53b3c393bf9b0c56"
 }
