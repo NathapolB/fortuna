@@ -278,16 +278,25 @@ def select_picks_532(
 
     first6 = _top_values(ensemble_picks, "first6", 7, exclude=recent)
     two_back = _top_values(ensemble_picks, "two_back", 5)
-    front3 = _top_values(ensemble_picks, "three_front", 3)
+    # 8 distinct front3 guesses: first 3 feed the front3+back3 group, the next 5
+    # head the back2 tickets — so each back2 ticket also shots เลขหน้า 3 ตัว.
+    front3 = _top_values(ensemble_picks, "three_front", 8)
     back3 = _top_values(ensemble_picks, "three_back", 3)
 
     tickets: list[dict[str, str]] = []
 
-    # 5 × เลขท้าย 2 ตัว
+    # 5 × เลขหน้า 3 ตัว + เลขท้าย 2 ตัว
+    #   [front3 head (3)] [filler (1)] [two_back tail (2)]
+    #   → one ticket can win front3 (first 3) OR back2 (last 2).
     for i in range(5):
-        prefix = (first6[i] if i < len(first6) else first6[0])[:4]
+        head = front3[3 + i] if 3 + i < len(front3) else front3[i % len(front3)]
+        filler = first6[i][3] if i < len(first6) and len(first6[i]) >= 4 else str(i)
         tickets.append(
-            {"value": prefix + two_back[i], "group": "two_back", "label": "เลขท้าย 2 ตัว"}
+            {
+                "value": head + filler + two_back[i],
+                "group": "front3_two_back",
+                "label": "เลขหน้า 3 + ท้าย 2",
+            }
         )
 
     # 3 × เลขหน้า 3 + ท้าย 3

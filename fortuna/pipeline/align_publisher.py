@@ -166,6 +166,7 @@ def _build_doc(prediction: dict) -> dict:
     plan = prediction.get("ticket_plan")
     if plan:
         groups = [
+            ("front3_two_back", "🎯 5 ใบ — เลขหน้า 3 ตัว + เลขท้าย 2 ตัว"),
             ("two_back", "🎲 5 ใบ — เน้นเลขท้าย 2 ตัว"),
             ("front3_back3", "🎯 3 ใบ — เลขหน้า 3 ตัว + เลขท้าย 3 ตัว"),
             ("first1", "🥇 2 ใบ — รางวัลที่ 1"),
@@ -178,7 +179,11 @@ def _build_doc(prediction: dict) -> dict:
             rows: list[list[dict]] = []
             for t in items:
                 v = t["value"]
-                if gkey == "two_back":
+                if gkey == "front3_two_back":
+                    rows.append([_txt(v[:3], "bold", "code"), _txt(v[3]),
+                                 _txt(v[4:], "bold", "code"),
+                                 _txt("  ← หน้า 3 / ท้าย 2")])
+                elif gkey == "two_back":
                     rows.append([_txt(v[:4]), _txt(v[4:], "bold", "code"),
                                  _txt("  ← ท้าย 2 ตัว")])
                 elif gkey == "front3_back3":
