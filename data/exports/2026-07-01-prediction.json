@@ -109,5 +109,7 @@
   ],
   "total_tickets": 10,
   "total_cost_thb": 800,
-  "picks_sha256": "8ec6ed497f8aa3055e0fa5610d17f6ce370327ff38126b4ecf7ba63ff80577c5"
+  "picks_sha256": "8ec6ed497f8aa3055e0fa5610d17f6ce370327ff38126b4ecf7ba63ff80577c5",
+  "freeze_commit_sha": "321024af34465e55816a5fe08c8f780e537a21f2",
+  "align_note_id": "99a874e9-a267-4f93-98d7-2f9b485c3962"
 }
