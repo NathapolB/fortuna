@@ -224,13 +224,55 @@ def select_picks(
 # All 10 Pao Tang tickets are 6-digit, but each is CONSTRUCTED to target a
 # specific prize tier (Pao Tang auto-checks every tier, so a ticket can still
 # win others incidentally):
-#   • 5 tickets — เลขท้าย 2 ตัว  : last 2 digits = top-5 two_back picks
-#                                   (leading 4 = best first6 prefixes, varied)
-#   • 3 tickets — เลขหน้า 3 + ท้าย 3 : first 3 = top-3 three_front,
-#                                       last 3 = top-3 three_back (glued)
-#   • 2 tickets — รางวัลที่ 1     : top-2 first6 picks (recency-guarded)
+#   • 5 tickets — [front3] [filler] [back2] : win เลขหน้า 3 OR เลขท้าย 2
+#   • 3 tickets — [front3] [back3]          : win เลขหน้า 3 AND/OR เลขท้าย 3
+#   • 2 tickets — รางวัลที่ 1                : ensemble model, recency-guarded
+#
+# รางวัลที่ 1 is the only model-driven tier. เลขหน้า/ท้าย 2–3 ตัว are independent
+# uniform draws (no model beats chance — confirmed: top historical value appears
+# ≤5× in 374 draws), so those use seeded MAX-SPREAD coverage instead — the
+# honest, mathematically-optimal play for a random draw.
 
 _LEN = {"first6": 6, "three_front": 3, "three_back": 3, "two_back": 2}
+
+
+def _spread_values(
+    prize_type: str,
+    n: int,
+    seed: int = 0,
+    exclude: set[str] | None = None,
+) -> list[str]:
+    """Maximally-spread distinct picks for a UNIFORM-random prize tier.
+
+    เลขหน้า/ท้าย 2–3 ตัว are independent uniform draws — no model beats chance.
+    The optimal play for a fixed ticket count is therefore broad COVERAGE, not
+    a fake "prediction". We walk the value space with a golden-ratio step
+    (low-discrepancy), so picks are evenly spread, distinct, non-degenerate, and
+    vary per draw via `seed` (draw date) while staying deterministic/reproducible.
+    """
+    from math import gcd
+
+    length = _LEN[prize_type]
+    space = 10 ** length
+    excl = set(exclude or set())
+
+    # Golden-ratio base step + a seed-dependent nudge so two spreads with
+    # different seeds aren't merely parallel shifts of each other.
+    step = max(1, round(space * 0.6180339887)) + (seed % 17)
+    while gcd(step, space) != 1:                  # coprime → full-cycle, all distinct
+        step += 1
+
+    out: list[str] = []
+    x = seed % space
+    for _ in range(space):
+        if len(out) >= n:
+            break
+        v = str(x % space).zfill(length)
+        x = (x + step) % space
+        if v in out or v in excl or len(set(v)) == 1:  # skip dup / 000 / 00 …
+            continue
+        out.append(v)
+    return out[:n]
 
 
 def _top_values(
@@ -270,18 +312,23 @@ def _top_values(
 def select_picks_532(
     ensemble_picks: dict[str, list[Pick]],
     recent_winners: set[str] | None = None,
+    seed: int = 0,
 ) -> list[dict[str, str]]:
     """Build 10 prize-targeted 6-digit tickets. Returns ordered list of
-    {"value", "group", "label"} — 5 two_back, 3 front3+back3, 2 first1.
+    {"value", "group", "label"} — 5 (front3+two_back), 3 (front3+back3), 2 first1.
+
+    รางวัลที่ 1 uses the ensemble model (recency-guarded). The uniform-random
+    tiers (เลขหน้า/ท้าย 2–3 ตัว) use seeded max-spread COVERAGE instead — a model
+    can't beat chance there, so broad spread is the honest, optimal choice.
     """
     recent = set(recent_winners or set())
 
     first6 = _top_values(ensemble_picks, "first6", 7, exclude=recent)
-    two_back = _top_values(ensemble_picks, "two_back", 5)
-    # 8 distinct front3 guesses: first 3 feed the front3+back3 group, the next 5
-    # head the back2 tickets — so each back2 ticket also shots เลขหน้า 3 ตัว.
-    front3 = _top_values(ensemble_picks, "three_front", 8)
-    back3 = _top_values(ensemble_picks, "three_back", 3)
+    # Uniform tiers → spread, not model. front3 needs 8 distinct (3 for the
+    # front3+back3 group, 5 to head the back2 tickets).
+    two_back = _spread_values("two_back", 5, seed=seed)
+    front3 = _spread_values("three_front", 8, seed=seed)
+    back3 = _spread_values("three_back", 3, seed=seed + 7)  # offset → not glued to front3
 
     tickets: list[dict[str, str]] = []
 

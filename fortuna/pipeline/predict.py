@@ -281,7 +281,11 @@ def run_predict(
     }
 
     # Run picker — strategy 5/3/2 builds 10 prize-targeted 6-digit tickets.
-    ticket_plan = select_picks_532(ensemble_picks, recent_winners=recent_winners)
+    # Seed the uniform-tier spread from the draw date (tamper-evident, varies/งวด).
+    spread_seed = int(target_date.replace("-", ""))
+    ticket_plan = select_picks_532(
+        ensemble_picks, recent_winners=recent_winners, seed=spread_seed
+    )
 
     # All tickets are 6-digit Pao Tang tickets (settlement is multi-prize and
     # bucket-agnostic), so they live under the "first6" bucket downstream.
